@@ -37,10 +37,31 @@ class CreateOrderService {
       throw new AppError('Could not find this customer in database');
     }
 
-    const productsList = await this.productsRepository.findAllById(products);
+    const dbProducts = await this.productsRepository.findAllById(products);
 
-    this.ordersRepository.create({ customer });
+    const foundProductIDs = dbProducts.map(dbProduct => dbProduct.id);
+
+    const productsIDCheck = products.filter(
+      product => !foundProductIDs.includes(product.id),
+    );
+
+    if (productsIDCheck) {
+      throw new AppError('Some products were not found in database');
+    }
+
+    const producstOrder = products.map(product => ({
+      product_id: product.id,
+      quantity: product.quantity,
+      price: dbProducts.filter(p => p.id === product.id)[0].quantity,
+    }));
+
+    const order = await this.ordersRepository.create({
+      customer,
+      products: producstOrder,
+    });
+    return order;
   }
 }
+//       price: dbProducts.find(p => p.id === product.id).price,
 
 export default CreateOrderService;
